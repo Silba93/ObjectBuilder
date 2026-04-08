@@ -1,5 +1,7 @@
 # Build and Release Folders
-bin/
+bin/*
+!bin/ObjectBuilder/
+!bin/ObjectBuilder/**
 bin-debug/
 bin-debug-temp/
 bin-release/
