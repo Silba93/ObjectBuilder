@@ -1375,7 +1375,17 @@ package
             {
                 if (!denyIds[i])
                 {
-                    thingsToReplace[thingsToReplace.length] = list[i].thing;
+                    var thing:ThingType = list[i].thing;
+                    if (!_things.hasThingType(thing.category, thing.id))
+                    {
+                        Log.info(Resources.getString(
+                            "thingNotFound",
+                            Resources.getString(thing.category),
+                            thing.id));
+                        denyIds[i] = true;
+                        continue;
+                    }
+                    thingsToReplace[thingsToReplace.length] = thing;
                     thingsIds[thingsIds.length] = list[i].id;
                 }
             }

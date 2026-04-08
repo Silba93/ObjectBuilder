@@ -59,6 +59,9 @@ THE SOFTWARE.
             [Bindable]
             private var _recursive:Boolean = false;
 
+            [Bindable]
+            private var _replaceByName:Boolean = false;
+
             // --------------------------------------------------------------------------
             // GETTERS
             // --------------------------------------------------------------------------
@@ -73,9 +76,66 @@ THE SOFTWARE.
                 return _selectedFiles;
             }
 
+            public function get replaceByName():Boolean
+            {
+                return _replaceByName;
+            }
+
             // --------------------------------------------------------------------------
             // METHODS
             // --------------------------------------------------------------------------
+
+            private function parseIdFromFilename(filename:String):int
+            {
+                var nameWithoutExt:String = filename.replace(/\.obd$/i, "");
+                var match:Array = nameWithoutExt.match(/^.*_(\d+)_[^_]+-v\d$/);
+                if (match && match.length > 1)
+                    return int(match[1]);
+                return -1;
+            }
+
+            private function hasParseErrors():Boolean
+            {
+                for (var i:int = 0; i < _fileList.length; i++)
+                {
+                    if (_fileList.getItemAt(i)["parseFailed"])
+                        return true;
+                }
+                return false;
+            }
+
+            private function updateConfirmButton():void
+            {
+                confirmButton.enabled = (_fileList.length > 0 && (!_replaceByName || !hasParseErrors()));
+            }
+
+            protected function replaceModeChangeHandler(event:Event):void
+            {
+                _replaceByName = CheckBox(event.target).selected;
+                // Rebuild labels with or without ID annotations
+                if (_fileList.length > 0)
+                {
+                    for (var i:int = 0; i < _fileList.length; i++)
+                    {
+                        var item:Object = _fileList.getItemAt(i);
+                        var id:int = parseIdFromFilename(item["rawName"]);
+                        item["parseFailed"] = _replaceByName && (id == -1);
+                        item["name"] = fileItemLabelFromRaw(item["rawName"]);
+                        _fileList.itemUpdated(item);
+                    }
+                }
+                updateConfirmButton();
+            }
+
+            private function fileItemLabelFromRaw(rawName:String):String
+            {
+                if (!_replaceByName)
+                    return rawName;
+                var id:int = parseIdFromFilename(rawName);
+                if (id == -1)
+                    return rawName + "  [unrecognized name]";
+                return rawName + "  \u2192  ID: " + id;
+            }
 
             protected function importFilesButtonClickHandler(event:MouseEvent):void
             {
@@ -95,21 +155,28 @@ THE SOFTWARE.
                 var fileList:Array = event.target["files"] as Array;
                 if (fileList && fileList.length > 0)
                 {
-                    _selectedFiles = new Vector.<PathHelper>();
-                    var idx:uint = 0;
+                    _fileList.removeAll();
                     for each (var f:File in fileList)
                     {
                         if (f.extension && f.extension.toLowerCase() == "obd")
                         {
-                            _selectedFiles.push(new PathHelper(f.nativePath, idx));
-                            idx++;
+                            var id:int = parseIdFromFilename(f.name);
+                            _fileList.addItem({
+                                rawName: f.name,
+                                name: fileItemLabelFromRaw(f.name),
+                                path: f.nativePath,
+                                parsedId: id,
+                                parseFailed: _replaceByName && (id == -1)
+                            });
                         }
                     }
-                    if (_selectedFiles.length > 0)
+                    if (_fileList.length > 0 && (!_replaceByName || !hasParseErrors()))
                     {
+                        _selectedFiles = buildSelectedFiles();
                         _detail = DialogDetail.OK;
                         close();
                     }
+                    updateConfirmButton();
                 }
             }
 
@@ -147,17 +214,23 @@ THE SOFTWARE.
             private function scanFolder(folder:File):void
             {
                 _fileList.removeAll();
-                var files:Array = folder.getDirectoryListing();
                 var obdFiles:Vector.<File> = new Vector.<File>();
 
                 collectFiles(folder, obdFiles);
 
                 for each (var f:File in obdFiles)
                 {
-                    _fileList.addItem({name: f.name, path: f.nativePath});
+                    var id:int = parseIdFromFilename(f.name);
+                    _fileList.addItem({
+                        rawName: f.name,
+                        name: fileItemLabelFromRaw(f.name),
+                        path: f.nativePath,
+                        parsedId: id,
+                        parseFailed: _replaceByName && (id == -1)
+                    });
                 }
 
-                confirmButton.enabled = (_fileList.length > 0);
+                updateConfirmButton();
             }
 
             private function collectFiles(folder:File, result:Vector.<File>):void
@@ -176,14 +249,21 @@ THE SOFTWARE.
                 }
             }
 
-            protected function confirmButtonClickHandler(event:MouseEvent):void
+            private function buildSelectedFiles():Vector.<PathHelper>
             {
-                _selectedFiles = new Vector.<PathHelper>();
+                var files:Vector.<PathHelper> = new Vector.<PathHelper>();
                 for (var i:int = 0; i < _fileList.length; i++)
                 {
                     var item:Object = _fileList.getItemAt(i);
-                    _selectedFiles.push(new PathHelper(item.path, uint(i)));
+                    var id:uint = _replaceByName ? uint(item["parsedId"]) : uint(i);
+                    files.push(new PathHelper(item["path"], id));
                 }
+                return files;
+            }
+
+            protected function confirmButtonClickHandler(event:MouseEvent):void
+            {
+                _selectedFiles = buildSelectedFiles();
                 _detail = DialogDetail.OK;
                 close();
             }
@@ -214,6 +294,10 @@ THE SOFTWARE.
         <s:CheckBox label="Scan subfolders recursively"
             selected="{_recursive}"
             change="recursiveChangeHandler(event)"/>
+
+        <s:CheckBox label="Replace existing items by ID from filename"
+            selected="{_replaceByName}"
+            change="replaceModeChangeHandler(event)"/>
 
         <s:Label text="Files found: {_fileList.length}" fontWeight="bold"/>
 

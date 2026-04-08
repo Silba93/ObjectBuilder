@@ -2810,7 +2810,10 @@ THE SOFTWARE.
                         var list:Vector.<PathHelper> = window.selectedFiles;
                         if (list.length != 0)
                         {
-                            importThingsFromFiles(list);
+                            if (window.replaceByName)
+                                replaceThingsFromFiles(list);
+                            else
+                                importThingsFromFiles(list);
                         }
                     }
                 }
