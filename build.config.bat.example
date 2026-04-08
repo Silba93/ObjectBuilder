@@ -1,0 +1,22 @@
+@echo off
+rem Copy to build.config.bat and customize paths for your machine.
+
+rem Java 8
+rem set "JAVA=C:\Program Files\Java\jre1.8.0_461\bin\java.exe"
+rem set "JAVA_HOME=C:\Program Files\Java\jre1.8.0_461"
+
+rem Apache Flex SDK (desktop SDK with real mxmlc.jar)
+rem set "FLEX_SDK=C:\Path\To\ApacheFlex\4.16.1"
+rem set "MXMLC=C:\Path\To\ApacheFlex\4.16.1\lib\mxmlc.jar"
+rem set "FLEXLIB=C:\Path\To\ApacheFlex\4.16.1\frameworks"
+
+rem AIR libs (frameworks\libs\air) from an SDK that includes airglobal.swc
+rem set "AIRLIBS=C:\Path\To\Flex_SDK\frameworks\libs\air"
+
+rem AIR SDK for packaging (adt)
+rem set "AIR_SDK=C:\Path\To\AIRSDK_51.2.1"
+rem set "ADT=C:\Path\To\AIRSDK_51.2.1\bin\adt.bat"
+
+rem Code signing
+rem set "KEYSTORE=C:\Path\To\object_builder.p12"
+rem set "STOREPASS=objectbuilder"
