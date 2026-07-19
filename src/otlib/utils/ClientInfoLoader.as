@@ -56,6 +56,7 @@ package otlib.utils
         private var m_dat:File;
         private var m_spr:File;
         private var m_clientInfo:ClientInfo;
+        private var m_fallbackVersion:Version;
         private var m_total:uint;
         private var m_loaded:uint;
 
@@ -84,7 +85,8 @@ package otlib.utils
         // Public
         // --------------------------------------
 
-        public function load(dat:File, spr:File, extended:Boolean):void
+        public function load(dat:File, spr:File, extended:Boolean,
+                fallbackVersion:Version = null):void
         {
             if (!dat)
                 throw new NullArgumentError("dat");
@@ -105,6 +107,7 @@ package otlib.utils
 
             m_dat = dat;
             m_spr = spr;
+            m_fallbackVersion = fallbackVersion;
             m_clientInfo = new ClientInfo();
             m_clientInfo.features = new ClientFeatures();
             m_clientInfo.features.extended = extended;
@@ -194,23 +197,24 @@ package otlib.utils
                     m_clientInfo.datSignature,
                     m_clientInfo.sprSignature);
 
+            // Signatures are used for automatic version detection only. Custom
+            // clients may use arbitrary signatures while retaining a known file
+            // format, so allow the caller's selected version as a fallback.
             if (!version)
-            {
-                m_clientInfo.maxItemId = 0;
-                m_clientInfo.maxOutfitId = 0;
-                m_clientInfo.maxEffectId = 0;
-                m_clientInfo.maxMissileId = 0;
-                m_clientInfo.maxSpriteId = 0;
+                version = m_fallbackVersion;
 
-                dispatchEvent(new Event(Event.COMPLETE));
-                dispatchEvent(createErrorEvent(Resources.getString("unsupportedVersion")));
-                return;
+            if (version)
+            {
+                m_clientInfo.clientVersion = version.value;
+                m_clientInfo.clientVersionStr = version.valueStr;
+            }
+            else
+            {
+                m_clientInfo.clientVersion = 0;
+                m_clientInfo.clientVersionStr = "Unknown";
             }
 
-            m_clientInfo.clientVersion = version.value;
-            m_clientInfo.clientVersionStr = version.valueStr;
-
-            if (m_clientInfo.extended || version.value >= 960)
+            if (m_clientInfo.extended || (version != null && version.value >= 960))
             {
                 m_clientInfo.maxSpriteId = stream.readUnsignedInt();
                 m_clientInfo.features.extended = true;

@@ -668,7 +668,11 @@ THE SOFTWARE.
             
                         // Close any active object editor
                         editThing(null);
-            
+
+                        // Preserve the explicitly selected file format when a
+                        // custom client uses signatures that are not in versions.xml.
+                        _version = window.version;
+
                         sendCommand(new LoadFilesCommand(window.datFile,
                                     window.sprFile,
                                     window.version,
@@ -705,7 +709,8 @@ THE SOFTWARE.
             
                 var window:CompileAssetsWindow = new CompileAssetsWindow();
                 window.directory = _settings.getLastDirectory();
-                window.version = _versionStorage.getFromClientInfo(_clientInfo);
+                var compileVersion:Version = _versionStorage.getFromClientInfo(_clientInfo);
+                window.version = compileVersion ? compileVersion : _version;
                 window.extended = _clientInfo.extended;
                 window.transparency = _clientInfo.transparency;
                 window.improvedAnimations = _clientInfo.improvedAnimations;
@@ -1571,7 +1576,17 @@ THE SOFTWARE.
                     throw new NullArgumentError("info");
             
                 _clientInfo = info;
-                _version = _versionStorage.getBySignatures(info.datSignature, info.sprSignature);
+                var detectedVersion:Version = _versionStorage.getBySignatures(
+                        info.datSignature, info.sprSignature);
+                if (detectedVersion)
+                {
+                    _version = detectedVersion;
+                }
+                else if (!_version || _version.value != info.clientVersion)
+                {
+                    var matchingVersions:Vector.<Version> = _versionStorage.getByValue(info.clientVersion);
+                    _version = matchingVersions.length > 0 ? matchingVersions[0] : null;
+                }
                 _extendedEnabled = info.extended;
                 _transparencyEnabled = info.transparency;
                 _clientChanged = info.changed;
@@ -2830,7 +2845,11 @@ THE SOFTWARE.
             
                 var version:Version = _settings.getLastExportThingVersion();
                 if (!version)
+                {
                     version = _versionStorage.getFromClientInfo(_clientInfo);
+                    if (!version)
+                        version = _version;
+                }
             
                 _locked = true;
             
@@ -2879,7 +2898,11 @@ THE SOFTWARE.
 
                 var version:Version = _settings.getLastExportThingVersion();
                 if (!version)
+                {
                     version = _versionStorage.getFromClientInfo(_clientInfo);
+                    if (!version)
+                        version = _version;
+                }
 
                 _locked = true;
 

@@ -346,7 +346,7 @@ THE SOFTWARE.
                 var loader:ClientInfoLoader = new ClientInfoLoader();
                 loader.addEventListener(Event.COMPLETE, completeHandler);
                 loader.addEventListener(ErrorEvent.ERROR, errorHandler);
-                loader.load(dat, spr, this.extended);
+                loader.load(dat, spr, this.extended, m_version);
             
                 function completeHandler(event:Event):void
                 {
@@ -366,7 +366,28 @@ THE SOFTWARE.
             
                     m_datFile = dat;
                     m_sprFile = spr;
-                    m_version = VersionStorage.getInstance().getFromClientInfo(info);
+                    var detectedVersion:Version = VersionStorage.getInstance().getFromClientInfo(info);
+                    if (detectedVersion)
+                    {
+                        m_version = detectedVersion;
+                        versionsDropDownList.selectedItem = detectedVersion;
+                        setErrorText(null);
+                    }
+                    else
+                    {
+                        m_version = versionsDropDownList.selectedItem as Version;
+                        if (m_version)
+                        {
+                            m_version = m_version.clone();
+                            m_version.datSignature = info.datSignature;
+                            m_version.sprSignature = info.sprSignature;
+                            setErrorText("Custom DAT/SPR signatures; using the selected client version.");
+                        }
+                        else
+                        {
+                            setErrorText("Custom DAT/SPR signatures; select the client version to use.");
+                        }
+                    }
             
                     var loadSpriteDimension:SpriteDimension = SpriteDimensionStorage.getInstance().getFromClientInfo(info);
                     if (loadSpriteDimension)
@@ -395,7 +416,6 @@ THE SOFTWARE.
                 {
                     m_datFile = null;
                     m_sprFile = null;
-                    m_version = null;
                     setErrorText(event.text);
                     updateProperties();
                 }
@@ -412,11 +432,12 @@ THE SOFTWARE.
                     stream.endian = Endian.LITTLE_ENDIAN;
                     sprSignature = stream.readUnsignedInt();
 
-                    var version:Version = VersionStorage.getInstance().getBySprSignature(sprSignature);
+                    var detectedVersion:Version = VersionStorage.getInstance().getBySprSignature(sprSignature);
+                    var version:Version = detectedVersion ? detectedVersion : m_version;
                     if (!version)
                     {
                         stream.close();
-                        setErrorText("Unknown SPR signature: 0x" + sprSignature.toString(16).toUpperCase());
+                        setErrorText("Select the client version to use for this SPR file.");
                         updateProperties();
                         return;
                     }
@@ -439,7 +460,9 @@ THE SOFTWARE.
 
                 m_sprFile = spr;
                 m_datFile = null;
-                m_version = version;
+                m_version = detectedVersion ? version : version.clone();
+                m_version.sprSignature = sprSignature;
+                versionsDropDownList.selectedItem = version;
 
                 sprSignatureLabel.text = sprSignature.toString(16).toUpperCase();
                 spritesCountLabel.text = spritesCount.toString();
@@ -472,7 +495,8 @@ THE SOFTWARE.
                 extendedCheckBox.enabled = false;
                 m_sprFile = null;
                 m_datFile = null;
-                m_version = null;
+                if (versionsDropDownList)
+                    m_version = versionsDropDownList.selectedItem as Version;
             
                 setErrorText(null);
             }
@@ -529,6 +553,9 @@ THE SOFTWARE.
             
             private function windowCreationCompleteHandler(event:FlexEvent):void
             {
+                versionsDropDownList.dataProvider = new ArrayCollection(VersionStorage.getInstance().getList());
+                versionsDropDownList.selectedIndex = -1;
+
                 spriteDimensionsDropDownList.dataProvider = new ArrayCollection(SpriteDimensionStorage.getInstance().getList());
                 if (!spriteDimension && spriteDimensionsDropDownList.dataProvider.length > 0)
                     spriteDimension = spriteDimensionsDropDownList.dataProvider[0];
@@ -568,6 +595,17 @@ THE SOFTWARE.
             private function spriteDimensionsDropDownListChangeHandler(event:Event):void
             {
                 spriteDimension = spriteDimensionsDropDownList.selectedItem as SpriteDimension;
+            }
+
+            private function versionsDropDownListChangeHandler(event:Event):void
+            {
+                m_version = versionsDropDownList.selectedItem as Version;
+                if (m_version)
+                    clientVersionLabel.text = m_version.toString();
+                if (m_clientDirectory)
+                    setClientDirectory(m_clientDirectory);
+                else
+                    updateProperties();
             }
             
             private function attributeServerChangeHandler(event:Event):void
@@ -766,6 +804,11 @@ THE SOFTWARE.
             </mg:layout>
 
             <s:Label id="clientVersionLabel"/>
+
+            <s:DropDownList id="versionsDropDownList"
+                width="180"
+                prompt="Select client version"
+                change="versionsDropDownListChangeHandler(event)"/>
 
         </mg:GroupBox>
 

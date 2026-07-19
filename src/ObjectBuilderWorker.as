@@ -1959,9 +1959,11 @@ package
             var sourceVersion:Version = VersionStorage.getInstance().getBySignatures(datSignature, sprSignature);
             if (!sourceVersion)
             {
-                Log.error("Unknown source client version (DAT sig: " + datSignature + ", SPR sig: " + sprSignature + ")");
-                sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
-                return;
+                // Signatures identify known releases but are not a validity gate.
+                // Custom clients can retain the currently loaded file format while
+                // using arbitrary DAT/SPR signatures.
+                sourceVersion = _version;
+                Log.info("Custom source DAT/SPR signatures; using client version " + sourceVersion.toString());
             }
 
             var sourceFeatures:ClientFeatures = new ClientFeatures(

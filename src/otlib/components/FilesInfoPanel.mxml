@@ -64,11 +64,11 @@ THE SOFTWARE.
                     throw new NullArgumentError("info");
             
                 var version:Version = m_versions.getBySignatures(info.datSignature, info.sprSignature);
-            
+
                 spriteDimensionLabel.text = SpriteExtent.DEFAULT_VALUE;
-                if (version)
+                if (info.loaded)
                 {
-                    filesVersionLabel.text = version.toString();
+                    filesVersionLabel.text = version ? version.toString() : info.clientVersionStr;
                     datSignatureLabel.text = info.datSignature.toString(16).toUpperCase();
                     itemsCountLabel.text = info.maxItemId.toString() + (info.otbLoaded ? " (OTB " + info.otbItemsCount.toString() + ")" : "");
                     outfitsCountLabel.text = info.maxOutfitId.toString();

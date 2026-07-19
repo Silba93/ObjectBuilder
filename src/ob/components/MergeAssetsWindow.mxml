@@ -40,7 +40,8 @@ THE SOFTWARE.
         <![CDATA[
             import com.mignari.skins.PixeledBorderContainerSkin;
             import com.mignari.utils.DialogDetail;
-            
+
+            import mx.collections.ArrayCollection;
             import mx.events.FlexEvent;
             
             import nail.utils.FileUtil;
@@ -279,7 +280,7 @@ THE SOFTWARE.
                 var loader:ClientInfoLoader = new ClientInfoLoader();
                 loader.addEventListener(Event.COMPLETE, completeHandler);
                 loader.addEventListener(ErrorEvent.ERROR, errorHandler);
-                loader.load(dat, spr, this.extended);
+                loader.load(dat, spr, this.extended, m_version);
             
                 function completeHandler(event:Event):void
                 {
@@ -299,7 +300,18 @@ THE SOFTWARE.
             
                     m_datFile = dat;
                     m_sprFile = spr;
-                    m_version = VersionStorage.getInstance().getFromClientInfo(info);
+                    var detectedVersion:Version = VersionStorage.getInstance().getFromClientInfo(info);
+                    if (detectedVersion)
+                    {
+                        m_version = detectedVersion;
+                        versionsDropDownList.selectedItem = detectedVersion;
+                        setErrorText(null);
+                    }
+                    else
+                    {
+                        m_version = versionsDropDownList.selectedItem as Version;
+                        setErrorText("Custom DAT/SPR signatures; select the client version to use.");
+                    }
                     updateProperties();
                 }
             
@@ -307,7 +319,6 @@ THE SOFTWARE.
                 {
                     m_datFile = null;
                     m_sprFile = null;
-                    m_version = null;
                     setErrorText(event.text);
                     updateProperties();
                 }
@@ -328,7 +339,8 @@ THE SOFTWARE.
                 extendedCheckBox.enabled = false;
                 m_sprFile = null;
                 m_datFile = null;
-                m_version = null;
+                if (versionsDropDownList)
+                    m_version = versionsDropDownList.selectedItem as Version;
             
                 setErrorText(null);
             }
@@ -382,6 +394,8 @@ THE SOFTWARE.
             
             private function windowCreationCompleteHandler(event:FlexEvent):void
             {
+                versionsDropDownList.dataProvider = new ArrayCollection(VersionStorage.getInstance().getList());
+                versionsDropDownList.selectedIndex = -1;
                 updateProperties();
             }
             
@@ -401,6 +415,17 @@ THE SOFTWARE.
             private function clientDirectoryChangeHandler(event:FileTextInputEvent):void
             {
                 clientDirectory = event.file;
+            }
+
+            private function versionsDropDownListChangeHandler(event:Event):void
+            {
+                m_version = versionsDropDownList.selectedItem as Version;
+                if (m_version)
+                    clientVersionLabel.text = m_version.toString();
+                if (m_clientDirectory)
+                    setClientDirectory(m_clientDirectory);
+                else
+                    updateProperties();
             }
             
             private function extendedCheckBoxChangeHandler(event:Event):void
@@ -472,6 +497,11 @@ THE SOFTWARE.
             </mg:layout>
 
             <s:Label id="clientVersionLabel"/>
+
+            <s:DropDownList id="versionsDropDownList"
+                width="180"
+                prompt="Select client version"
+                change="versionsDropDownListChangeHandler(event)"/>
         </mg:GroupBox>
 
         <!-- client options -->
