@@ -38,6 +38,7 @@ THE SOFTWARE.
         <![CDATA[
             import com.mignari.utils.DialogDetail;
 
+            import flash.events.FileListEvent;
             import flash.filesystem.File;
             import flash.net.FileFilter;
 
@@ -141,18 +142,18 @@ THE SOFTWARE.
             {
                 var filter:FileFilter = new FileFilter("OBD Files (*.obd)", "*.obd");
                 var file:File = File.documentsDirectory;
-                file.addEventListener("selectMultiple", filesSelectMultipleHandler);
+                file.addEventListener(FileListEvent.SELECT_MULTIPLE, filesSelectMultipleHandler);
                 file.addEventListener(Event.CANCEL, filesCancelHandler);
                 file.browseForOpenMultiple("Select OBD Files", [filter]);
             }
 
-            private function filesSelectMultipleHandler(event:Event):void
+            private function filesSelectMultipleHandler(event:FileListEvent):void
             {
                 var file:File = File(event.target);
-                file.removeEventListener("selectMultiple", filesSelectMultipleHandler);
+                file.removeEventListener(FileListEvent.SELECT_MULTIPLE, filesSelectMultipleHandler);
                 file.removeEventListener(Event.CANCEL, filesCancelHandler);
 
-                var fileList:Array = event.target["files"] as Array;
+                var fileList:Array = event.files;
                 if (fileList && fileList.length > 0)
                 {
                     _fileList.removeAll();
